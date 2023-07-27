@@ -7,17 +7,17 @@ import myfct
 st.title("Patents Analysis")
 
 # Directory path
-dirpath = 'C:/Edwin/Communication/Dashboards/technology_exposure/'
+#dirpath = 'C:/Edwin/Communication/Dashboards/technology_exposure/'
 
 
 ### Prepare data
 
 # Import the concordance CPC-NACE
-cpc_nace_df = pd.read_csv(dirpath+"concordance_cpc_nace.csv", sep=";", dtype={'cpc': 'object', 'nace': 'object', 'weight': 'float64'})
+cpc_nace_df = pd.read_csv("concordance_cpc_nace.csv", sep=";", dtype={'cpc': 'object', 'nace': 'object', 'weight': 'float64'})
 # Import patent data
-patent_df = pd.read_csv(dirpath+"selected_patent_all.csv", sep=';')
+patent_df = pd.read_csv("selected_patent_all.csv", sep=';')
 # Import the list of NACE
-nace_df = pd.read_csv(dirpath+'nace_v2.csv', sep=';', dtype={'Level': 'int64', 'Code': 'object', 'Code': 'object'})
+nace_df = pd.read_csv('nace_v2.csv', sep=';', dtype={'Level': 'int64', 'Code': 'object', 'Code': 'object'})
 
 # Convert date strings to datetime objects
 patent_df["publication_date"] = pd.to_datetime(patent_df["publication_date"], format="%Y%m%d")
