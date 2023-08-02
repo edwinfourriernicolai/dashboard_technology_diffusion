@@ -126,11 +126,13 @@ def count_patent_nace(nace_l, patent_df, cpc_nace_df):
         l_nace = cpc_nace_df.loc[(cpc_nace_df["cpc"] == cpc), "nace"].to_list()
         for nace in l_nace:
             # For each CPC code and each corresponding NACE code, attribute (weight x ni) to the counter 
-            nace_count[nace] += float(cpc_nace_df.loc[(cpc_nace_df["cpc"] == cpc) & (cpc_nace_df["nace"] == nace), "weight"])*ni
+            weight = cpc_nace_df.loc[(cpc_nace_df["cpc"] == cpc) & (cpc_nace_df["nace"] == nace), "weight"]
+            nace_count[nace] += float(weight.iloc[0])*ni
 
     return nace_count
 
 
+@st.cache_data
 def determine_nace_1d(s):
     """
     Determine the NACE 1 digit sector from the code at >=2 digit sector
@@ -187,3 +189,4 @@ def determine_nace_1d(s):
         return "U"
     else:
         return None
+
