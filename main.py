@@ -6,23 +6,18 @@ import myfct
 # Set the title
 st.title("Diffusion of digital technologies")
 
-# Directory path
-#dirpath = 'C:/Edwin/Communication/Dashboards/technology_exposure/'
-
 
 ### Prepare data
 
-# Import the concordance CPC-NACE
-cpc_nace_df = pd.read_csv("concordance_cpc_nace.csv", sep=";", dtype={'cpc': 'object', 'nace': 'object', 'weight': 'float64'})
 # Import patent data
 patent_df = pd.read_csv("selected_patent_all.csv", sep=';')
 # Import the list of NACE
 nace_df = pd.read_csv('nace_v2.csv', sep=';', dtype={'Level': 'int64', 'Code': 'object', 'Code': 'object'})
 
-# Convert date strings to datetime objects
-patent_df["publication_date"] = pd.to_datetime(patent_df["publication_date"], format="%Y%m%d")
-# Get the list of NACE codes
-nace_l = nace_df.loc[(nace_df['Level'] == 4), 'Code'].to_list()
+
+# Prepare patent dataframe
+patent_df["publication_date"] = pd.to_datetime(patent_df["publication_date"])
+patent_df['country'].mask((patent_df['country'] == "European Patent Office"), "EPO", inplace=True)
 # Create a dictionary of sectors
 sector_dict = nace_df[(nace_df['Level'] == 4)].set_index("Description")["Code"].to_dict()
 # Create a dictionary of sector names
@@ -49,6 +44,14 @@ sector_names = {
     "T": "Activities of households as employers; undifferentiated goods and services producing activities of households for own use",
     "U": "Activities of extraterritorial organisations and bodies",
 }
+# Create a dictionary of topics
+topic_dict = {
+    "robotics": "robot",
+    "virtual reality": "arvr",
+    "big data": "bigdata",
+    "internet of things": "iot",
+    "cybersecurity": "itsecurity",
+}
 
 
 ### Sidebar
@@ -57,44 +60,31 @@ topic_list = ["robotics", "virtual reality", "big data", "internet of things", "
 sector_list = list(sector_dict.keys())
 with st.sidebar:
     selected_topic = st.selectbox("Select a technological domain", topic_list)
-    selected_date = st.slider('Select a time range', 1990, 2014, (1990, 2014))
+    selected_date = st.slider('Select a time range', 1960, 2023, (1960, 2023))
     selected_sector_des = st.selectbox("Select an economic sector", sector_list)
 
 # Get the code of the sector instead of the description
 selected_sector = sector_dict[selected_sector_des]
+# Get the code of the topic
+topic = topic_dict[selected_topic]
+
+
+### Filtering
 
 # Filter data based on the selected filters
-filtered_df = patent_df[(patent_df["topic"] == selected_topic)]
-filtered_df = filtered_df[(filtered_df["publication_date"].dt.year >= selected_date[0]) & (filtered_df["publication_date"].dt.year <= selected_date[1])]
+patent_df = patent_df[(patent_df["topic"] == topic)]
+patent_df = patent_df[(patent_df["publication_date"].dt.year >= selected_date[0]) & (patent_df["publication_date"].dt.year <= selected_date[1])]
 
-
-### Computations
-
-#filtered_df = patent_df.copy()
-#selected_date = (1990,2005)
-#selected_sector = '96.09'
-
-# if filtered_df has changed -> affect cache?
-# select years after 
-
-# Count the number of patents by NACE sector for each year
-count_l = []
-for year in range(selected_date[0], selected_date[1]+1):
-    count_y = myfct.count_patent_nace(nace_l, filtered_df[(filtered_df["publication_date"].dt.year == year)], cpc_nace_df)
-    count_y['year'] = year
-    count_l.append(count_y)
-# Convert the list of yearly dictionaries into a longitudinal dataframe
-count_df_l = [pd.DataFrame(count_y, index=[0]) for count_y in count_l]
-count_df = pd.concat(count_df_l, ignore_index=True)
-count_df.set_index("year", inplace=True)
-count_df = count_df.transpose()
+# Import and filter patent data
+count_df = pd.read_csv("count_patent_nace_{}.csv".format(topic), sep=';', dtype={'nace': 'object'}, index_col='nace')
+count_df = count_df.loc[:, str(selected_date[0]):str(selected_date[1])]
 
 
 ### Construct plots
 
 ## Evolution of patents published over time
 # Group by year and count the number of patents for each year
-grp_year_df = filtered_df.groupby(filtered_df["publication_date"].dt.year).size().reset_index(name="number_of_patents")
+grp_year_df = patent_df.groupby(patent_df["publication_date"].dt.year).size().reset_index(name="number_of_patents")
 # Plot
 topic_ts_chart = (
     alt.Chart(grp_year_df)
@@ -102,14 +92,14 @@ topic_ts_chart = (
     .encode(
         x=alt.X("publication_date:O", axis=alt.Axis(title="Year")),
         y=alt.Y("number_of_patents:Q", axis=alt.Axis(title="Number of patents")),
-        tooltip=[alt.Tooltip("number_of_patents:Q", title="Number of patents"), alt.Tooltip("year:O", title="Year")],
+        tooltip=[alt.Tooltip("number_of_patents:Q", title="Number of patents"), alt.Tooltip("publication_date:O", title="Year")],
     )
-    .properties(title="Number of patents published for {} over time".format(selected_topic))
+    .properties(title="Number of patents published for {} over time".format(selected_topic), width=520, height=292.5)
 )
 
 ## Patents by country
 # Group by country and count the number of patents for each country
-grp_country_df = filtered_df.groupby(filtered_df["country"]).size().reset_index(name="number_of_patents")
+grp_country_df = patent_df.groupby(patent_df["country"]).size().reset_index(name="number_of_patents")
 # Select only the top 10 countries
 grp_country_df = grp_country_df.nlargest(10, "number_of_patents")
 # Plot
@@ -122,12 +112,13 @@ country_bp_chart = (
         tooltip=[alt.Tooltip("number_of_patents:Q", title="Number of patents"), alt.Tooltip("country:N", title="Country")],
         color=alt.Color("country:N", legend=None),        
     )
-    .properties(title="Top 10 countries with the highest number of patents published for {}".format(selected_topic))
+    .properties(title="Top 10 countries with the highest number of patents published for {}".format(selected_topic), width=520, height=292.5)
 )
 
 ## Evolution of selected sector exposure over time
 # Extract data for the selected sector
-count_sector = count_df.loc[selected_sector].reset_index(name="number_of_patents")
+count_sector = count_df.loc[selected_sector].reset_index()
+count_sector.columns = ["year", "number_of_patents"]
 # Plot
 sector_ts_chart = (
     alt.Chart(count_sector)
@@ -137,7 +128,7 @@ sector_ts_chart = (
         y=alt.Y("number_of_patents:Q", axis=alt.Axis(title="Number of patents")),
         tooltip=[alt.Tooltip("number_of_patents:Q", title="Number of patents"), alt.Tooltip("year:O", title="Year")],
     )
-    .properties(title="Number of patents published for {} in the {} sector over time".format(selected_topic, selected_sector))
+    .properties(title="Number of patents published for {} in the {} sector over time".format(selected_topic, selected_sector), width=520, height=292.5)
 )
 
 ## Sector exposure
@@ -158,7 +149,7 @@ sector_bp_chart = (
         tooltip=[alt.Tooltip("number_of_patents:Q", title="Number of patents"), alt.Tooltip("name:N", title="Sector")],
         color=alt.Color("name:N", legend=None),
     )
-    .properties(title="Number of patents published for {} by economic sector".format(selected_topic))
+    .properties(title="Number of patents published for {} by economic sector".format(selected_topic), width=520, height=292.5)
 )
 
 

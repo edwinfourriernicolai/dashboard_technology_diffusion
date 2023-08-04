@@ -1,8 +1,7 @@
-# Syntax analysis - Functions
+# Dashboard technology exposure - Functions
 
 #coding:utf-8
 
-import datetime
 import streamlit as st
 
 def frequency_list(l, freq=False):
@@ -26,18 +25,6 @@ def frequency_list(l, freq=False):
     return count
 
 
-def convert_date(mydate):
-    """
-    Converting the format of a date from yyyymmdd to yyyy-mm-dd
-    Require module: datetime
-
-    Args: 
-      mydate : The date to convert
-    """
-    ndate = datetime.datetime.strptime(str(mydate),'%Y%m%d')
-    return ndate
-
-
 def unique(l):
     """
     Get unique values from a list.
@@ -58,29 +45,6 @@ def unique(l):
     return unique_list
 
 
-def ndigit_nace_code(x):
-    """
-    Display the number of digits of NACE codes.
-
-    Require module: None
-
-    Args:
-      x : a nace code in string format wherein division and group are separated by a "."
-    
-    Out:
-      an integer indicating the number of digits
-
-    """
-    if x.isalpha():
-        ndigit = 1
-    elif ((len(x) == 1) | (len(x) == 2)) & ("." not in x):
-        ndigit = 2
-    else:
-        ndigit = 2 + len(x.split(".")[1])
-    return ndigit
-
-
-@st.cache_data
 def count_patent_nace(nace_l, patent_df, cpc_nace_df):
     """
     Count the number of patents by NACE sector
