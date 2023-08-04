@@ -9,15 +9,8 @@ st.title("Diffusion of digital technologies")
 
 ### Prepare data
 
-# Import patent data
-patent_df = pd.read_csv("selected_patent_all.csv", sep=';')
 # Import the list of NACE
 nace_df = pd.read_csv('nace_v2.csv', sep=';', dtype={'Level': 'int64', 'Code': 'object', 'Code': 'object'})
-
-
-# Prepare patent dataframe
-patent_df["publication_date"] = pd.to_datetime(patent_df["publication_date"])
-patent_df['country'].mask((patent_df['country'] == "European Patent Office"), "EPO", inplace=True)
 # Create a dictionary of sectors
 sector_dict = nace_df[(nace_df['Level'] == 4)].set_index("Description")["Code"].to_dict()
 # Create a dictionary of sector names
@@ -71,11 +64,13 @@ topic = topic_dict[selected_topic]
 
 ### Filtering
 
-# Filter data based on the selected filters
-patent_df = patent_df[(patent_df["topic"] == topic)]
-patent_df = patent_df[(patent_df["publication_date"].dt.year >= selected_date[0]) & (patent_df["publication_date"].dt.year <= selected_date[1])]
-
 # Import and filter patent data
+patent_df = pd.read_csv("selected_patent_{}_1900_2023.csv".format(topic), sep=';')
+patent_df["publication_date"] = pd.to_datetime(patent_df["publication_date"], format="%Y%m%d")
+patent_df = patent_df[(patent_df["publication_date"].dt.year >= selected_date[0]) & (patent_df["publication_date"].dt.year <= selected_date[1])]
+patent_df['country'].mask((patent_df['country'] == "European Patent Office"), "EPO", inplace=True)
+
+# Import and filter count data
 count_df = pd.read_csv("count_patent_nace_{}.csv".format(topic), sep=';', dtype={'nace': 'object'}, index_col='nace')
 count_df = count_df.loc[:, str(selected_date[0]):str(selected_date[1])]
 
